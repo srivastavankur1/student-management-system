@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Login</title>
+    <link rel="stylesheet" href="/static/styles.css?v=2">
+</head>
+<body>
+    <div class="login-container">
+        <h2>Login</h2>
+        <form id="login-form">
+            <input type="email" id="email" placeholder="Email" required /><br>
+            <input type="password" id="password" placeholder="Password" required /><br>
+            <button type="submit">Login</button>
+        </form>
+    </div>
+
+    <script>
+        document.getElementById("login-form").addEventListener("submit", async function (e) {
+            e.preventDefault();
+
+            const email = document.getElementById("email").value;
+            const password = document.getElementById("password").value;
+
+            const res = await fetch("/auth/login", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/x-www-form-urlencoded"
+                },
+                body: new URLSearchParams({ username: email, password: password })
+            });
+
+            if (res.ok) {
+                const data = await res.json();
+                const token = data.access_token;
+                localStorage.setItem("token", token);
+
+                // Decode JWT payload
+                const payload = JSON.parse(atob(token.split('.')[1]));
+                const role = payload.role;
+
+                // Redirect based on role
+                if (role.toLowerCase() === "admin") {
+                    window.location.href = "/static/admin.html";
+                } else {
+                    window.location.href = "/static/profile.html";
+                }
+            } else {
+                const error = await res.json();
+                alert("Login failed: " + error.detail);
+            }
+        });
+    </script>
+</body>
+</html>

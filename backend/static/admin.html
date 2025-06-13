@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Admin Dashboard</title>
+    <link rel="stylesheet" href="/static/styles.css?v=3">
+</head>
+<body>
+    <div class="navbar">
+        <div class="logo">Student Management System</div>
+        <div class="nav-links">
+            <button onclick="showForm()">+ Add Student</button>
+            <button onclick="logout()">Logout</button>
+        </div>
+    </div>
+    <h2>Welcome, Admin</h2> 
+    <h3>All Students</h3>
+
+    <div id="form-container" style="display:none; margin-top:10px;">
+        <h4>New Student</h4>
+        <form id="add-student-form">
+            <input type="text" id="name" placeholder="Name" required /><br>
+            <input type="email" id="email" placeholder="Email" required /><br>
+            <input type="password" id="password" placeholder="Password" required /><br>
+            <input type="text" id="phone" placeholder="Phone" /><br>
+            
+            <select id="role">
+                <option value="student" selected>Student</option>
+                <option value="admin">Admin</option>
+            </select><br>
+            <select id="branch">
+                <option value="Btech" selected>Btech</option>
+                <option value="BBA">BBA</option>
+                <option value="BCA">BCA</option>
+            </select><br>
+            <button type="submit">Add Student</button>
+        </form>
+    </div>
+
+    <table border="1" id="students-table" style="margin-top: 15px;">
+        <thead>
+            <tr>
+                <th>ID</th><th>Name</th><th>Email</th><th>Phone</th><th>Branch</th><th>Actions</th>
+            </tr>
+        </thead>
+        <tbody></tbody>
+    </table>
+
+    <script>
+        const token = localStorage.getItem("token");
+
+        if (!token) {
+            alert("Not authenticated!");
+            window.location.href = "/static/login.html";
+        }
+
+        async function fetchStudents() {
+            const res = await fetch("/students", {
+                headers: { "Authorization": "Bearer " + token }
+            });
+
+            const students = await res.json();
+            const tbody = document.querySelector("#students-table tbody");
+            tbody.innerHTML = "";
+
+            students.forEach(student => {
+                const tr = document.createElement("tr");
+
+                tr.innerHTML = `
+                    <td>${student.student_id}</td>
+                    <td>${student.name}</td>
+                    <td>${student.email}</td>
+                    <td>${student.phone || "-"}</td>
+                    <td>${student.branch}</td>  
+                    <td><button onclick="deleteStudent(${student.student_id})">Delete</button></td>
+                `;
+
+                tbody.appendChild(tr);
+            });
+        }
+
+        async function deleteStudent(id) {
+            if (!confirm("Delete this student?")) return;
+
+            const res = await fetch(`/students/${id}`, {
+                method: "DELETE",
+                headers: { "Authorization": "Bearer " + token }
+            });
+
+            if (res.ok) {
+                alert("Deleted!");
+                fetchStudents();
+            } else {
+                alert("Failed to delete");
+            }
+        }
+
+        function logout() {
+            localStorage.removeItem("token");
+            window.location.href = "/static/login.html";
+        }
+
+        function showForm() {
+            document.getElementById("form-container").style.display = "block";
+        }
+
+        document.getElementById("add-student-form").addEventListener("submit", async function (e) {
+            e.preventDefault();
+
+            const body = {
+                name: document.getElementById("name").value,
+                email: document.getElementById("email").value,
+                password: document.getElementById("password").value,
+                phone: document.getElementById("phone").value,
+                role: document.getElementById("role").value,
+                branch:document.getElementById("branch").value
+            };
+
+            const res = await fetch("/students", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": "Bearer " + token
+                },
+                body: JSON.stringify(body)
+            });
+
+            if (res.ok) {
+                alert("Student added!");
+                fetchStudents();
+                document.getElementById("add-student-form").reset();
+                document.getElementById("form-container").style.display = "none";
+            } else {
+                const error = await res.json();
+                alert("Failed: " + error.detail);
+            }
+        });
+
+        fetchStudents();
+    </script>
+</body>
+</html>

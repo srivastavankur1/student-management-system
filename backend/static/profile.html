@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Student Profile</title>
+</head>
+<body>
+    <h2>Student Profile</h2>
+    <button onclick="logout()">Logout</button>
+
+    <div id="info" style="margin-top: 20px;">
+        <p><strong>Name:</strong> <span id="name"></span></p>
+        <p><strong>Email:</strong> <span id="email"></span></p>
+        <p><strong>Phone:</strong> <span id="phone"></span></p>
+        <p><strong>Branch:</strong> <span id="branch"></span></p>
+    </div>
+
+    <script>
+        const token = localStorage.getItem("token");
+        if (!token) {
+            alert("You are not logged in");
+            window.location.href = "/static/login.html";
+        }
+
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        const userEmail = payload.sub;
+
+        async function fetchStudentProfile() {
+            const res = await fetch("/students/me", {
+                headers: { "Authorization": "Bearer " + token }
+            });
+        
+            const me = await res.json();
+        
+            document.getElementById("name").textContent = me.name;
+            document.getElementById("email").textContent = me.email;
+            document.getElementById("phone").textContent = me.phone || "-";
+            document.getElementById("branch").textContent = me.branch || "-";
+        }
+        function logout() {
+            localStorage.removeItem("token");
+            window.location.href = "/static/login.html";
+        }
+
+        fetchStudentProfile();
+    </script>
+</body>
+</html>
