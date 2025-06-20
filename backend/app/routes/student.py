@@ -1,4 +1,7 @@
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, status, UploadFile, File
+import tempfile
+import shutil
+from app.routes.summarizer import summarize_file
 from app.models.student_model import StudentCreate, StudentOut, StudentUpdate
 from app.database import get_connection
 import psycopg2
@@ -9,6 +12,8 @@ from fastapi import Body
 from app.utils.password import hash_password
 from fastapi import Depends
 from app.dependency import get_current_user, require_admin
+
+
 
 router = APIRouter(prefix="/students", tags=["Students"])
 
@@ -34,6 +39,18 @@ def get_my_profile(user: dict = Depends(get_current_user)):
     finally:
         cursor.close()
         conn.close()
+
+@router.post("/summarizer", dependencies=[Depends(get_current_user)])
+async def summarize_document(file: UploadFile = File(...)):
+    with tempfile.NamedTemporaryFile(delete=False, suffix=f".{file.filename.split('.')[-1]}") as tmp:
+        shutil.copyfileobj(file.file, tmp)
+        tmp_path = tmp.name
+
+    try:
+        summary = summarize_file(tmp_path)
+        return {"summary": summary}
+    except Exception as e:
+        return {"error": str(e)}
 
 @router.post("/", status_code=status.HTTP_201_CREATED, response_model=StudentCreateResponse, dependencies=[Depends(require_admin)])
 def create_student(student: StudentCreate):

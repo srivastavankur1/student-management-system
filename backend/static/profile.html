@@ -2,16 +2,50 @@
 <html>
 <head>
     <title>Student Profile</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 40px auto;
+        }
+        h2 {
+            margin-bottom: 10px;
+        }
+        .box {
+            padding: 15px;
+            background-color: #f2f2f2;
+            border-radius: 5px;
+            margin-top: 20px;
+        }
+        textarea {
+            width: 100%;
+            height: 250px;
+            margin-top: 10px;
+            resize: vertical;
+        }
+    </style>
 </head>
 <body>
     <h2>Student Profile</h2>
     <button onclick="logout()">Logout</button>
 
-    <div id="info" style="margin-top: 20px;">
+    <div id="info" class="box">
         <p><strong>Name:</strong> <span id="name"></span></p>
         <p><strong>Email:</strong> <span id="email"></span></p>
         <p><strong>Phone:</strong> <span id="phone"></span></p>
         <p><strong>Branch:</strong> <span id="branch"></span></p>
+    </div>
+
+    <div class="box">
+        <h3>Summarize Your Document</h3>
+        <form id="uploadForm">
+            <input type="file" id="fileInput" accept=".pdf,.docx" required />
+            <button type="submit">Summarize</button>
+        </form>
+        <div id="summaryBox" style="display: none; margin-top: 15px;">
+            <h4>Summary:</h4>
+            <textarea readonly id="summaryOutput"></textarea>
+        </div>
     </div>
 
     <script>
@@ -28,18 +62,44 @@
             const res = await fetch("/students/me", {
                 headers: { "Authorization": "Bearer " + token }
             });
-        
             const me = await res.json();
-        
             document.getElementById("name").textContent = me.name;
             document.getElementById("email").textContent = me.email;
             document.getElementById("phone").textContent = me.phone || "-";
             document.getElementById("branch").textContent = me.branch || "-";
         }
+
         function logout() {
             localStorage.removeItem("token");
             window.location.href = "/static/login.html";
         }
+
+        // Handle document summarization
+        const form = document.getElementById('uploadForm');
+        const fileInput = document.getElementById('fileInput');
+        const summaryBox = document.getElementById('summaryBox');
+        const summaryOutput = document.getElementById('summaryOutput');
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const file = fileInput.files[0];
+            const formData = new FormData();
+            formData.append("file", file);
+
+            summaryBox.style.display = 'block';
+            summaryOutput.value = "Summarizing... Please wait.";
+
+            const response = await fetch('/students/summarizer', {
+                method: 'POST',
+                headers: {
+                    'Authorization': 'Bearer ' + token
+                },
+                body: formData
+            });
+
+            const data = await response.json();
+            summaryOutput.value = data.summary || data.error || "No summary returned.";
+        });
 
         fetchStudentProfile();
     </script>
